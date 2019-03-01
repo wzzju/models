@@ -225,7 +225,7 @@ def train(args):
     place = fluid.CUDAPlace(0) if args.use_gpu else fluid.CPUPlace()
     exe = fluid.Executor(place)
     exe.run(startup_prog)
-    
+
     if pretrained_model:
 
         def if_exist(var):
@@ -251,9 +251,10 @@ def train(args):
 
     train_fetch_list = [train_cost.name, train_acc1.name, train_acc5.name]
     test_fetch_list = [test_cost.name, test_acc1.name, test_acc5.name]
-
+    # convert Program to IrGraph
     main_graph = IrGraph(core.Graph(train_prog.desc), for_test=False)
     test_graph = IrGraph(core.Graph(test_prog.desc), for_test=True)
+    # insert fake_quantize_op and fake_dequantize_op before trainging and testing
     transform_pass = QuantizationTransformPass(
         scope=fluid.global_scope(), place=place, activation_quantize_type=quant_type)
     transform_pass.apply(main_graph)
@@ -273,6 +274,7 @@ def train(args):
         try:
             while True:
                 t1 = time.time()
+                # use binary for training
                 loss, acc1, acc5 = exe.run(binary, fetch_list=train_fetch_list)
                 t2 = time.time()
                 period = t2 - t1
@@ -334,6 +336,7 @@ def train(args):
                   test_acc1, test_acc5))
         sys.stdout.flush()
 
+    # freeze the graph after training
     freeze_pass = QuantizationFreezePass(scope=fluid.global_scope(), place=place)
     freeze_pass.apply(test_graph)
     server_program = test_graph.to_program()
@@ -343,8 +346,10 @@ def train(args):
         target_vars=[out], executor=exe,
         main_program=server_program)
 
+    # convert the weights as int8_t type
     convert_int8_pass = ConvertToInt8Pass(scope=fluid.global_scope(), place=place)
     convert_int8_pass.apply(test_graph)
+    # make some changes on the graph for the mobile inference
     mobile_pass = TransformForMobilePass()
     mobile_pass.apply(test_graph)
     mobile_program = test_graph.to_program()
@@ -353,7 +358,7 @@ def train(args):
         feeded_var_names=[image.name],
         target_vars=[out], executor=exe,
         main_program=mobile_program)
-        
+
 def main():
     args = parser.parse_args()
     models_now = args.model_category

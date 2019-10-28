@@ -226,6 +226,9 @@ def train(args):
         if args.use_dali:
             train_iter.reset()
 
+        if args.use_dali:
+            train_iter.reset()
+
         if trainer_id == 0 and args.validate:
             if args.use_ema:
                 print('ExponentialMovingAverage validate start...')

@@ -57,7 +57,7 @@ def print_arguments(args):
 
 
 def add_arguments(argname, type, default, help, argparser, **kwargs):
-    """Add argparse's argument. 
+    """Add argparse's argument.
 
     Usage:
 
@@ -79,7 +79,7 @@ def add_arguments(argname, type, default, help, argparser, **kwargs):
 def parse_args():
     """Add arguments
 
-    Returns: 
+    Returns:
         all training args
     """
     parser = argparse.ArgumentParser(description=__doc__)
@@ -154,7 +154,7 @@ def parse_args():
 
 
 def check_gpu():
-    """   
+    """
     Log error and exit when set use_gpu=true in paddlepaddle
     cpu ver sion.
     """
@@ -299,12 +299,12 @@ def create_data_loader(is_train, args):
     Usage:
         Using mixup process in training, it will return 5 results, include data_loader, image, y_a(label), y_b(label) and lamda, or it will return 3 results, include data_loader, image, and label.
 
-    Args: 
+    Args:
         is_train: mode
         args: arguments
 
     Returns:
-        data_loader and the input data of net, 
+        data_loader and the input data of net,
     """
     image_shape = [int(m) for m in args.image_shape.split(",")]
 

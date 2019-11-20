@@ -30,9 +30,9 @@ def set_paddle_flags(flags):
 
 # NOTE(paddle-dev): All of these flags should be
 # set before `import paddle`. Otherwise, it would
-# not take any effect. 
+# not take any effect.
 set_paddle_flags({
-    'FLAGS_eager_delete_tensor_gb': 0,  # enable gc 
+    'FLAGS_eager_delete_tensor_gb': 0,  # enable gc
     'FLAGS_fraction_of_gpu_memory_to_use': 0.98
 })
 
@@ -54,7 +54,7 @@ def build_program(is_train, main_prog, startup_prog, args):
         startup_prog: strartup program
         args: arguments
 
-    Returns : 
+    Returns :
         train mode: [Loss, global_lr, data_loader]
         test mode: [Loss, data_loader]
     """
@@ -80,7 +80,7 @@ def build_program(is_train, main_prog, startup_prog, args):
                 optimizer = create_optimizer(args)
                 avg_cost = loss_out[0]
                 optimizer.minimize(avg_cost)
-                #XXX: fetch learning rate now, better implement is required here. 
+                #XXX: fetch learning rate now, better implement is required here.
                 global_lr = optimizer._global_learning_rate()
                 global_lr.persistable = True
                 loss_out.append(global_lr)
@@ -132,9 +132,9 @@ def validate(args, test_iter, exe, test_prog, test_fetch_list, pass_id,
 
 def train(args):
     """Train model
-    
+
     Args:
-        args: all arguments.    
+        args: all arguments.
     """
     startup_prog = fluid.Program()
     train_prog = fluid.Program()

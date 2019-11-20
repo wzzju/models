@@ -126,6 +126,7 @@ def parse_args():
     add_arg('reader_buf_size',          int,    2048,                   "The buf size of multi thread reader")
     add_arg('interpolation',            int,    None,                   "The interpolation mode")
     add_arg('use_aa',                   bool,   False,                  "Whether to use auto augment")
+    add_arg('fp16',             bool,  False,                "Enable half precision training with fp16." )
     parser.add_argument('--image_mean', nargs='+', type=float, default=[0.485, 0.456, 0.406], help="The mean of input image data")
     parser.add_argument('--image_std', nargs='+', type=float, default=[0.229, 0.224, 0.225], help="The std of input image data")
 
@@ -344,7 +345,7 @@ def create_data_loader(is_train, args):
         return data_loader, [feed_image, feed_label]
 
 
-def print_info(pass_id, batch_id, print_step, metrics, time_info, info_mode):
+def print_info(pass_id, batch_id, print_step, metrics, time_info, speed, info_mode):
     """print function
 
     Args:
@@ -362,23 +363,23 @@ def print_info(pass_id, batch_id, print_step, metrics, time_info, info_mode):
             if len(metrics) == 2:
                 loss, lr = metrics
                 print(
-                    "[Pass {0}, train batch {1}] \tloss {2}, lr {3}, elapse {4}".
+                    "[Pass {0}, train batch {1}] \tloss {2}, lr {3}, elapse {4}, speed {5}".
                     format(pass_id, batch_id, "%.5f" % loss, "%.5f" % lr,
-                           "%2.4f sec" % time_info))
+                           "%2.4f sec" % time_info, "%.2f imgs/sec" % speed))
             # train and no mixup output
             elif len(metrics) == 4:
                 loss, acc1, acc5, lr = metrics
                 print(
-                    "[Pass {0}, train batch {1}] \tloss {2}, acc1 {3}, acc5 {4}, lr {5}, elapse {6}".
+                    "[Pass {0}, train batch {1}] \tloss {2}, acc1 {3}, acc5 {4}, lr {5}, elapse {6}, speed {7}".
                     format(pass_id, batch_id, "%.5f" % loss, "%.5f" % acc1,
-                           "%.5f" % acc5, "%.5f" % lr, "%2.4f sec" % time_info))
+                           "%.5f" % acc5, "%.5f" % lr, "%2.4f sec" % time_info, "%.2f imgs/sec" % speed))
             # test output
             elif len(metrics) == 3:
                 loss, acc1, acc5 = metrics
                 print(
-                    "[Pass {0}, test  batch {1}] \tloss {2}, acc1 {3}, acc5 {4}, elapse {5}".
+                    "[Pass {0}, test  batch {1}] \tloss {2}, acc1 {3}, acc5 {4}, elapse {5}, speed {6}".
                     format(pass_id, batch_id, "%.5f" % loss, "%.5f" % acc1,
-                           "%.5f" % acc5, "%2.4f sec" % time_info))
+                           "%.5f" % acc5, "%2.4f sec" % time_info, "%.2f imgs/sec" % speed))
             else:
                 raise Exception(
                     "length of metrics {} is not implemented, It maybe caused by wrong format of build_program_output".

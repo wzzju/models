@@ -15,4 +15,5 @@ python train.py \
        --validate=1 \
        --is_profiler=0 \
        --profiler_path=profile/ \
+       --use_dali=True \
        --lr=0.1

@@ -30,9 +30,9 @@ def set_paddle_flags(flags):
 
 # NOTE(paddle-dev): All of these flags should be
 # set before `import paddle`. Otherwise, it would
-# not take any effect. 
+# not take any effect.
 set_paddle_flags({
-    'FLAGS_eager_delete_tensor_gb': 0,  # enable gc 
+    'FLAGS_eager_delete_tensor_gb': 0,  # enable gc
     'FLAGS_fraction_of_gpu_memory_to_use': 0.98
 })
 
@@ -54,7 +54,7 @@ def build_program(is_train, main_prog, startup_prog, args):
         startup_prog: strartup program
         args: arguments
 
-    Returns : 
+    Returns :
         train mode: [Loss, global_lr, data_loader]
         test mode: [Loss, data_loader]
     """
@@ -78,10 +78,12 @@ def build_program(is_train, main_prog, startup_prog, args):
             # add backward op in program
             if is_train:
                 optimizer = create_optimizer(args)
+                if args.fp16:
+                    optimizer = fluid.contrib.mixed_precision.decorate(optimizer, use_dynamic_loss_scaling=False, init_loss_scaling=128.0)
                 avg_cost = loss_out[0]
                 optimizer.minimize(avg_cost)
-                #XXX: fetch learning rate now, better implement is required here. 
-                global_lr = optimizer._global_learning_rate()
+                #XXX: fetch learning rate now, better implement is required here.
+                global_lr = optimizer._optimizer._global_learning_rate() if args.fp16 else optimizer._global_learning_rate()
                 global_lr.persistable = True
                 loss_out.append(global_lr)
                 if args.use_ema:
@@ -108,6 +110,7 @@ def validate(args, test_data_loader, exe, test_prog, test_fetch_list, pass_id,
                                          fetch_list=test_fetch_list)
             t2 = time.time()
             test_batch_elapse = t2 - t1
+            speed = args.test_batch_size * 1.0 / test_batch_elapse
             test_batch_time_record.append(test_batch_elapse)
 
             test_batch_metrics_avg = np.mean(
@@ -115,7 +118,7 @@ def validate(args, test_data_loader, exe, test_prog, test_fetch_list, pass_id,
             test_batch_metrics_record.append(test_batch_metrics_avg)
 
             print_info(pass_id, test_batch_id, args.print_step,
-                       test_batch_metrics_avg, test_batch_elapse, "batch")
+                       test_batch_metrics_avg, test_batch_elapse, speed, "batch")
             sys.stdout.flush()
             test_batch_id += 1
 
@@ -129,16 +132,17 @@ def validate(args, test_data_loader, exe, test_prog, test_fetch_list, pass_id,
     test_epoch_metrics_avg = np.mean(
         np.array(test_batch_metrics_record), axis=0)
 
+    speed = args.test_batch_size * 1.0 / test_epoch_time_avg
     print_info(pass_id, 0, 0,
                list(train_epoch_metrics_avg) + list(test_epoch_metrics_avg),
-               test_epoch_time_avg, "epoch")
+               test_epoch_time_avg, speed, "epoch")
 
 
 def train(args):
     """Train model
-    
+
     Args:
-        args: all arguments.    
+        args: all arguments.
     """
     startup_prog = fluid.Program()
     train_prog = fluid.Program()
@@ -208,23 +212,24 @@ def train(args):
                                               fetch_list=train_fetch_list)
                 t2 = time.time()
                 train_batch_elapse = t2 - t1
+                speed = args.batch_size * 1.0 / train_batch_elapse
                 train_batch_time_record.append(train_batch_elapse)
                 train_batch_metrics_avg = np.mean(
                     np.array(train_batch_metrics), axis=1)
                 train_batch_metrics_record.append(train_batch_metrics_avg)
                 if trainer_id == 0:
                     print_info(pass_id, train_batch_id, args.print_step,
-                               train_batch_metrics_avg, train_batch_elapse,
+                               train_batch_metrics_avg, train_batch_elapse, speed,
                                "batch")
                     sys.stdout.flush()
                 train_batch_id += 1
                 total_batch_num = total_batch_num + 1 #this is for benchmark
 
                 ##profiler tools
-                if args.is_profiler and pass_id == 0 and train_batch_id == 100: 
+                if args.is_profiler and pass_id == 0 and train_batch_id == 100:
                     profiler.start_profiler("All")
                 elif args.is_profiler and pass_id == 0 and train_batch_id == 150:
-                    profiler.stop_profiler("total", args.profiler_path)
+                    profiler.stop_profiler("total", os.path.join(args.profiler_path, "profile_%d" % (trainer_id)))
                     return
 
         except fluid.core.EOFException:

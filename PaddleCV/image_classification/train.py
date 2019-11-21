@@ -223,7 +223,7 @@ def train(args):
             train_batch_metrics_record.append(train_batch_metrics_avg)
             if trainer_id == 0:
                 print_info(pass_id, train_batch_id, args.print_step,
-                           train_batch_metrics_avg, train_batch_elapse, spedd, "batch")
+                           train_batch_metrics_avg, train_batch_elapse, speed, "batch")
                 sys.stdout.flush()
             train_batch_id += 1
             t1 = time.time()

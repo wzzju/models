@@ -2,6 +2,8 @@
 
 export CUDA_VISIBLE_DEVICES=7
 
+export FLAGS_fraction_of_gpu_memory_to_use=0.8
+
 python train.py \
        --model=ResNet50 \
        --data_dir=/work/datasets/ILSVRC2012/ \

@@ -21,7 +21,7 @@ def _calc_label_smoothing_loss(softmax_out, label, class_dim, epsilon):
 
     Returns:
         label smoothing loss
-        
+
     """
 
     label_one_hot = fluid.layers.one_hot(input=label, depth=class_dim)
@@ -36,7 +36,13 @@ def _basic_model(data, model, args, is_train):
     image = data[0]
     label = data[1]
 
-    net_out = model.net(input=image, class_dim=args.class_dim)
+    if args.model == "ResNet50":
+        if args.data_format == 'NHWC':
+            print("Basic---------------------------------------{}.{}".format(args.model, args.data_format))
+            image = fluid.layers.transpose(image, [0, 2, 3, 1])
+        net_out = model.net(input=image, args=args, class_dim=args.class_dim)
+    else:
+        net_out = model.net(input=image, class_dim=args.class_dim)
     softmax_out = fluid.layers.softmax(net_out, use_cudnn=False)
 
     if is_train and args.use_label_smoothing:
@@ -54,7 +60,7 @@ def _basic_model(data, model, args, is_train):
 
 def _googlenet_model(data, model, args, is_train):
     """GoogLeNet model output, include avg_cost, acc_top1 and acc_top5
-        
+
     Returns:
          GoogLeNet model output
 
@@ -86,7 +92,14 @@ def _mixup_model(data, model, args, is_train):
     y_b = data[2]
     lam = data[3]
 
-    net_out = model.net(input=image, class_dim=args.class_dim)
+    if args.model == "ResNet50":
+        if args.data_format == 'NHWC':
+            print("Mixup---------------------------------------{}.{}".format(args.model, args.data_format))
+            image = fluid.layers.transpose(image, [0, 2, 3, 1])
+        net_out = model.net(input=image, args=args, class_dim=args.class_dim)
+    else:
+        net_out = model.net(input=image, class_dim=args.class_dim)
+
     softmax_out = fluid.layers.softmax(net_out, use_cudnn=False)
     if not args.use_label_smoothing:
         loss_a = fluid.layers.cross_entropy(input=softmax_out, label=y_a)

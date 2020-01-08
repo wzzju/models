@@ -126,7 +126,10 @@ def parse_args():
     add_arg('reader_buf_size',          int,    2048,                   "The buf size of multi thread reader")
     add_arg('interpolation',            int,    None,                   "The interpolation mode")
     add_arg('use_aa',                   bool,   False,                  "Whether to use auto augment")
-    add_arg('fp16',             bool,  False,                "Enable half precision training with fp16." )
+    add_arg('fp16',                     bool,   False,                  "Enable half precision training with fp16." )
+    add_arg('data_format',              str,    "NCHW",                 "Tensor data format when training.")
+    add_arg('use_dynamic_loss_scaling', bool,   True,                   "Whether to use dynamic loss scaling.")
+    add_arg('scale_loss',               float,  1.0,                    "Scale loss for fp16." )
     parser.add_argument('--image_mean', nargs='+', type=float, default=[0.485, 0.456, 0.406], help="The mean of input image data")
     parser.add_argument('--image_std', nargs='+', type=float, default=[0.229, 0.224, 0.225], help="The std of input image data")
 
@@ -419,6 +422,9 @@ def best_strategy_compiled(args, program, loss, exe):
         build_strategy = fluid.compiler.BuildStrategy()
         #Feature will be supported in Fluid v1.6
         #build_strategy.enable_inplace = True
+        #build_strategy.cache_runtime_context = True
+        build_strategy.fuse_bn_act_ops = True
+        build_strategy.debug_graphviz_path = "/work/Develop/sync_work/models/PaddleCV/image_classification/graph/"
 
         exec_strategy = fluid.ExecutionStrategy()
         exec_strategy.num_threads = fluid.core.get_cuda_device_count()

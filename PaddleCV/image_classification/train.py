@@ -79,7 +79,9 @@ def build_program(is_train, main_prog, startup_prog, args):
             if is_train:
                 optimizer = create_optimizer(args)
                 if args.fp16:
-                    optimizer = fluid.contrib.mixed_precision.decorate(optimizer, use_dynamic_loss_scaling=False, init_loss_scaling=128.0)
+                    optimizer = fluid.contrib.mixed_precision.decorate(optimizer,
+                                                                       use_dynamic_loss_scaling=args.use_dynamic_loss_scaling,
+                                                                       init_loss_scaling=args.scale_loss)
                 avg_cost = loss_out[0]
                 optimizer.minimize(avg_cost)
                 #XXX: fetch learning rate now, better implement is required here.
@@ -198,6 +200,7 @@ def train(args):
 
     compiled_train_prog = best_strategy_compiled(args, train_prog,
                                                  train_fetch_vars[0], exe)
+    print('Thread num {}'.format(compiled_train_prog._exec_strategy.num_threads))
     for pass_id in range(args.num_epochs):
         if num_trainers > 1 and not args.use_dali:
             imagenet_reader.set_shuffle_seed(pass_id + (args.random_seed if args.random_seed else 0))
@@ -211,6 +214,8 @@ def train(args):
 
         t1 = time.time()
         for batch in train_iter:
+            #if train_batch_id >= 100:
+            #    return
             train_batch_metrics = exe.run(compiled_train_prog,
                                           feed=batch,
                                           fetch_list=train_fetch_list)
@@ -228,14 +233,13 @@ def train(args):
             train_batch_id += 1
             t1 = time.time()
 
-        if args.use_dali:
-            train_iter.reset()
             ##profiler tools
             if args.is_profiler and pass_id == 0 and train_batch_id == 100:
                 profiler.start_profiler("All")
-            elif args.is_profiler and pass_id == 0 and train_batch_id == 150:
+            elif args.is_profiler and pass_id == 0 and train_batch_id == 200:
                 profiler.stop_profiler("total", os.path.join(args.profiler_path, "profile_%d" % (trainer_id)))
                 return
+
 
         if args.use_dali:
             train_iter.reset()
